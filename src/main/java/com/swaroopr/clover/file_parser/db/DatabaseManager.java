@@ -24,12 +24,21 @@ public class DatabaseManager {
 		this.connection = databaseConnectionManager.getConnection();
 	}
 	
+	public void dropTable(DataSpec dataSpec) {
+		String dropTableSql = String.format("DROP TABLE IF EXISTS %s", getTableName(dataSpec));
+		try (Statement st = this.connection.createStatement()) {
+			st.executeUpdate(dropTableSql);
+		} catch (SQLException e) {
+			LOG.error(String.format("Failed to drop the table for the statement %s.", dropTableSql), e);
+		}
+	}
+	
 	public void createTable(DataSpec dataSpec) throws SQLException {
-		String createTableSql = String.format("CREATE TABLE %s (%s)", getTableName(dataSpec), generateColumnDefinition(dataSpec));
+		String createTableSql = String.format("CREATE TABLE IF NOT EXISTS %s (%s)", getTableName(dataSpec), generateColumnDefinition(dataSpec));
 		try (Statement st = this.connection.createStatement()) {
 			st.executeUpdate(createTableSql);
 		} catch (SQLException e) {
-			LOG.error("Failed to create the table for the statement %s.", createTableSql);
+			LOG.error(String.format("Failed to create the table for the statement %s.", createTableSql), e);
 		}
 	}
 	
@@ -45,7 +54,7 @@ public class DatabaseManager {
 				columnDefinitions.add(String.format("%s int", columnName));
 				break;
 			case TEXT:
-				columnDefinitions.add(String.format("%s varchar32(%d)", columnName, dataSpecUnit.getWidth()));
+				columnDefinitions.add(String.format("%s varchar(%d)", columnName, dataSpecUnit.getWidth()));
 				break;
 			default:
 				break;
@@ -55,38 +64,38 @@ public class DatabaseManager {
 	}
 
 	public void insertRecord(DataRecord dataRecord) {
-		String insertStatement = String.format("insert into %s ()", getTableName(dataRecord.getDataSpec()), generateColumnNameValueString(dataRecord));
-		try (Statement st = this.connection.createStatement()) {
-			st.executeUpdate(insertStatement);
-		} catch (SQLException e) {
-			LOG.error("Failed to insert the record %s.", insertStatement);
-		}
-	}
-
-	private String generateColumnNameValueString(DataRecord dataRecord) {
-		List<String> columnNameValueList = new ArrayList<>();
+		List<String> columnNames = new ArrayList<>();
+		List<String> values = new ArrayList<>();
 		for (DataUnit<?> dataUnit : dataRecord.getDataRecordUnitList()) {
 			DataSpecUnit dataSpecUnit = dataUnit.getDataSpecUnit();
 			String columnName = dataSpecUnit.getColumnName();
+			columnNames.add(columnName);
 			switch (dataSpecUnit.getDataType()) {
 			case BOOLEAN:
-				columnNameValueList.add(String.format("%s %s", columnName, (boolean) dataUnit.getValue() ? "true" : "false"));
+				values.add((Boolean) dataUnit.getValue() ? "true" : "false");
 				break;
 			case INTEGER:
-				columnNameValueList.add(String.format("%s %s", columnName, dataUnit.getValue().toString()));
+				values.add(dataUnit.getValue().toString());
 				break;
 			case TEXT:
-				columnNameValueList.add(String.format("%s \"%s\"", columnName, dataUnit.getValue().toString()));
+				values.add(String.format("'%s'", dataUnit.getValue().toString()));
 				break;
 			}
 		}
-		return String.join(", ", columnNameValueList);
+		String columnNamesString = String.join(", ", columnNames);
+		String valueString = String.join(", ", values);
+		String insertStatement = String.format("insert into %s (%s) VALUES (%s)", getTableName(dataRecord.getDataSpec()), columnNamesString, valueString);
+		try (Statement st = this.connection.createStatement()) {
+			st.executeUpdate(insertStatement);
+		} catch (SQLException e) {
+			LOG.error("Failed to insert the record {}.", insertStatement);
+		}
 	}
 	
 	private String getTableName(DataSpec dataSpec) {
 		String tableName = dataSpec.getFileNamePrefix();
 		tableName = tableName.replaceAll("\\s+", "_");				
-		return tableName.toLowerCase();
+		return "clover." + tableName.toLowerCase();
 	}
 	
 	@Override

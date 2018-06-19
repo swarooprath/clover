@@ -31,18 +31,25 @@ public class DataLineParser {
 					if (sc.hasNextBoolean()) {
 						result.add(new DataUnit<Boolean>(dataSpecUnit, sc.nextBoolean()));
 						break;
-					} else if (sc.hasNextByte()) {
-						byte b = sc.nextByte();
-						if (b == 1 || b == 0) {
-							boolean value = b == 1;
+					} else if (sc.hasNext()) {
+						// TODO: this is buggy and needs to be fixed. Solution: write my own scanner / parser
+						String nextString = sc.findInLine("\\s*\\d");
+						if (null == nextString) {
+							return logErrorAndReturnEmpty(line);
+						}
+						nextString = nextString.trim();
+						if (nextString.length() == 0) {
+							return logErrorAndReturnEmpty(line);
+						}
+						char c = nextString.charAt(0);
+						if (c == '1' || c == '0') {
+							boolean value = (c == '1');
 							result.add(new DataUnit<Boolean>(dataSpecUnit, value));
 						} else {
-							logError(line);
-							return Optional.empty();
+							return logErrorAndReturnEmpty(line);
 						}
 					} else {
-						logError(line);
-						return Optional.empty();
+						return logErrorAndReturnEmpty(line);
 					}
 					break;
 				case INTEGER:
@@ -50,8 +57,7 @@ public class DataLineParser {
 						int number = sc.nextInt();
 						result.add(new DataUnit<Integer>(dataSpecUnit, number));
 					} else {
-						logError(line);
-						return Optional.empty();
+						return logErrorAndReturnEmpty(line);
 					}
 					break;
 				case TEXT:
@@ -59,8 +65,7 @@ public class DataLineParser {
 						String text = sc.next();
 						result.add(new DataUnit<String>(dataSpecUnit, text));
 					} else {
-						logError(line);
-						return Optional.empty();
+						return logErrorAndReturnEmpty(line);
 					}
 					break;
 				}
@@ -69,7 +74,8 @@ public class DataLineParser {
 		return Optional.of(new DataRecord(dataSpec, result));
 	}
 
-	private void logError(String line) {
-		LOG.error("Unable to parse input line with value \"%s\" for the spec: %s.", line, dataSpec);
+	private Optional<DataRecord> logErrorAndReturnEmpty(String line) {
+		LOG.error("Unable to parse input line with value \"{}\" for the spec: {}.", line, dataSpec.getFileNamePrefix());
+		return Optional.empty();
 	}
 }

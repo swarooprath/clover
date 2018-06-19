@@ -21,14 +21,12 @@ public abstract class AbstractDataSpecFileVisitor<T> implements FileVisitor<Path
 	
 	@Override
 	public final FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-		LOG.warn("Unexpected postVisitDirectory method invoked for file with name: " + dir.getFileName());
 		return FileVisitResult.CONTINUE;
 	}
 
 	@Override
 	public final FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {	
-		LOG.warn("Unexpected directory found with name: " + dir.getFileName());
-		return FileVisitResult.SKIP_SIBLINGS;
+		return FileVisitResult.CONTINUE;
 	}
 
 	@Override
@@ -37,9 +35,11 @@ public abstract class AbstractDataSpecFileVisitor<T> implements FileVisitor<Path
 			Optional<DataSpec> spec = readSpec(file,attrs);
 			if (spec.isPresent()) {
 				execute(spec.get());
+			} else {
+				LOG.error("Cannot read spec file with name: " + file.getFileName());
 			}
 		} else {
-			LOG.error("Cannot read file with name: " + file.getFileName());
+			LOG.error("Cannot read spec file with name: " + file.getFileName());
 		}
 		return  FileVisitResult.CONTINUE;
 	}
@@ -64,7 +64,7 @@ public abstract class AbstractDataSpecFileVisitor<T> implements FileVisitor<Path
 			LOG.error("Unexpected format of header line %s for file with name %s.", lines.get(0), file.getFileName());
 		}
 		lines.remove(0);
-		String fileName = file.getName(-1).toString();
+		String fileName = file.getFileName().toString();
 		List<DataSpecUnit> specRecords = new ArrayList<>();
 		for (String line: lines) {
 			String[] parts = line.split(",");
@@ -89,6 +89,7 @@ public abstract class AbstractDataSpecFileVisitor<T> implements FileVisitor<Path
 			}
 			specRecords.add(new DataSpecUnit(columnName, width, dataType));
 		}
-		return Optional.of(new DataSpec(fileName, specRecords));
+		String filePrefix = fileName.substring(0, fileName.indexOf('.'));
+		return Optional.of(new DataSpec(filePrefix, specRecords));
 	}
 }

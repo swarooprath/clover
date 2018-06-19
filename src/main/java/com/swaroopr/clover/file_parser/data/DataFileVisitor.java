@@ -33,14 +33,16 @@ public class DataFileVisitor implements FileVisitor<Path> {
 	}
 	
 	public void init() throws SQLException {
+		if ("true".equals(System.getProperty("dropTables", "false")) || "true".equals(System.getProperty("dropTable" + dataSpec.getFileNamePrefix(), "false"))) {
+			this.dbManager.dropTable(dataSpec);
+		}
 		this.dbManager.createTable(dataSpec);
 		isInitialised = true;
 	}
 	
 	@Override
 	public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-		LOG.warn("Unexpected data directory found with name: " + dir.getFileName());
-		return FileVisitResult.SKIP_SIBLINGS;
+		return FileVisitResult.CONTINUE;
 	}
 
 	@Override
@@ -48,7 +50,7 @@ public class DataFileVisitor implements FileVisitor<Path> {
 		if (!isInitialised) {
 			throw new IllegalStateException("DataFileVisitor has not been initialised for the spec: " + this.dataSpec.getFileNamePrefix());
 		}
-		String fileName = file.getName(-1).toString();
+		String fileName = file.getFileName().toString();
 		if (!fileName.startsWith(dataSpec.getFileNamePrefix())) {
 			return FileVisitResult.CONTINUE;
 		}
@@ -73,7 +75,6 @@ public class DataFileVisitor implements FileVisitor<Path> {
 
 	@Override
 	public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-		LOG.warn("Unexpected postVisitDirectory method invoked for data directory with name: " + dir.getFileName());
 		return FileVisitResult.CONTINUE;
 	}
 }
