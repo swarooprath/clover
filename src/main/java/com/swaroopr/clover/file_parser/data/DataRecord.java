@@ -7,18 +7,18 @@ import com.swaroopr.clover.file_parser.spec.DataSpec;
 public class DataRecord {
 	
 	private final DataSpec dataSpec;
-	private final List<DataUnit> dataRecord;
+	private final List<DataUnit<?>> dataRecordUnitList;
 
-	public DataRecord(DataSpec dataSpec, List<DataUnit> dataRecord) {
+	public DataRecord(DataSpec dataSpec, List<DataUnit<?>> dataRecordUnitList) {
 		this.dataSpec = dataSpec;
-		this.dataRecord = dataRecord;
+		this.dataRecordUnitList = dataRecordUnitList;
 	}
 
 	public DataSpec getDataSpec() {
 		return dataSpec;
 	}
 
-	public List<DataUnit> getDataRecord() {
-		return dataRecord;
+	public List<DataUnit<?>> getDataRecordUnitList() {
+		return dataRecordUnitList;
 	}
 }

@@ -6,6 +6,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.swaroopr.clover.file_parser.data.DataRecord;
 import com.swaroopr.clover.file_parser.data.DataUnit;
 import com.swaroopr.clover.file_parser.spec.DataSpec;
@@ -13,17 +16,21 @@ import com.swaroopr.clover.file_parser.spec.DataSpecUnit;
 
 public class DatabaseManager {
 	
-	private final DatabaseConnectionManager databaseConnectionManager;
+	private static final Logger LOG = LoggerFactory.getLogger(DatabaseManager.class);
+	
 	private final Connection connection;
 	
 	public DatabaseManager(DatabaseConnectionManager databaseConnectionManager) {
-		this.databaseConnectionManager = databaseConnectionManager;
 		this.connection = databaseConnectionManager.getConnection();
 	}
 	
 	public void createTable(DataSpec dataSpec) throws SQLException {
 		String createTableSql = String.format("CREATE TABLE %s (%s)", getTableName(dataSpec), generateColumnDefinition(dataSpec));
-		this.connection.createStatement().executeUpdate(createTableSql);
+		try (Statement st = this.connection.createStatement()) {
+			st.executeUpdate(createTableSql);
+		} catch (SQLException e) {
+			LOG.error("Failed to create the table for the statement %s.", createTableSql);
+		}
 	}
 	
 	private Object generateColumnDefinition(DataSpec dataSpec) {
@@ -47,14 +54,18 @@ public class DatabaseManager {
 		return String.join(", ", columnDefinitions);
 	}
 
-	public void insertRecord(DataRecord dataRecord) throws SQLException {
+	public void insertRecord(DataRecord dataRecord) {
 		String insertStatement = String.format("insert into %s ()", getTableName(dataRecord.getDataSpec()), generateColumnNameValueString(dataRecord));
-		this.connection.createStatement().executeUpdate(insertStatement);
+		try (Statement st = this.connection.createStatement()) {
+			st.executeUpdate(insertStatement);
+		} catch (SQLException e) {
+			LOG.error("Failed to insert the record %s.", insertStatement);
+		}
 	}
 
 	private String generateColumnNameValueString(DataRecord dataRecord) {
 		List<String> columnNameValueList = new ArrayList<>();
-		for (DataUnit dataUnit : dataRecord.getDataRecord()) {
+		for (DataUnit<?> dataUnit : dataRecord.getDataRecordUnitList()) {
 			DataSpecUnit dataSpecUnit = dataUnit.getDataSpecUnit();
 			String columnName = dataSpecUnit.getColumnName();
 			switch (dataSpecUnit.getDataType()) {
@@ -76,5 +87,10 @@ public class DatabaseManager {
 		String tableName = dataSpec.getFileNamePrefix();
 		tableName = tableName.replaceAll("\\s+", "_");				
 		return tableName.toLowerCase();
+	}
+	
+	@Override
+	protected final void finalize() throws Throwable {
+		this.connection.close();
 	}
 }

@@ -12,16 +12,16 @@ public class DataSpecDirectoryTraverser<T> {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(DataSpecDirectoryTraverser.class);
 	
-	private final File directory;
+	private final File specDirectory;
 	private final AbstractDataSpecFileVisitor<T> dataspecTask;
 	
-	private DataSpecDirectoryTraverser(File directory, AbstractDataSpecFileVisitor<T> dataspecTask) {
-		this.directory = directory;
+	public DataSpecDirectoryTraverser(File specDirectory, AbstractDataSpecFileVisitor<T> dataspecTask) {
+		this.specDirectory = specDirectory;
 		this.dataspecTask = dataspecTask;
 	}
 
-	public File getDirectory() {
-		return directory;
+	public File getSpecDirectory() {
+		return specDirectory;
 	}
 
 	public AbstractDataSpecFileVisitor<T> getDataspecTask() {
@@ -30,9 +30,9 @@ public class DataSpecDirectoryTraverser<T> {
 	
 	public void traverse() {
 		try {
-			Files.walkFileTree(directory.toPath(), new HashSet<>(), 1, this.dataspecTask);
+			Files.walkFileTree(specDirectory.toPath(), new HashSet<>(), 1, this.dataspecTask);
 		} catch (IOException e) {
-			LOG.error("Unexpected IOException caught while traversing directory with path: " + directory.getAbsolutePath(), e);
+			LOG.error("Unexpected IOException caught while traversing directory with path: " + specDirectory.getAbsolutePath(), e);
 			throw new IllegalStateException(e);
 		}		
 	}
